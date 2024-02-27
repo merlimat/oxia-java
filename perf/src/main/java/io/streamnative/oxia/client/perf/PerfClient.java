@@ -43,8 +43,8 @@ public class PerfClient {
     private static final LongAdder readOps = new LongAdder();
     private static final LongAdder writeFailed = new LongAdder();
     private static final LongAdder readFailed = new LongAdder();
-    private static final Recorder writeLatency = new Recorder(TimeUnit.SECONDS.toMicros(120_000), 5);
-    private static final Recorder readLatency = new Recorder(TimeUnit.SECONDS.toMicros(120_000), 5);
+    private static final Recorder writeLatency = new Recorder(TimeUnit.SECONDS.toMicros(120), 5);
+    private static final Recorder readLatency = new Recorder(TimeUnit.SECONDS.toMicros(120), 5);
     private static final PerfArguments arguments = new PerfArguments();
 
     public static void main(String[] args) throws Exception {

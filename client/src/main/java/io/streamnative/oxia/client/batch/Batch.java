@@ -28,6 +28,7 @@ import io.streamnative.oxia.client.batch.Operation.WriteOperation.DeleteRangeOpe
 import io.streamnative.oxia.client.batch.Operation.WriteOperation.PutOperation;
 import io.streamnative.oxia.client.batch.Operation.WriteOperation.PutOperation.SessionInfo;
 import io.streamnative.oxia.client.grpc.OxiaStub;
+import io.streamnative.oxia.client.grpc.RpcResult;
 import io.streamnative.oxia.client.metrics.BatchMetrics;
 import io.streamnative.oxia.client.session.SessionManager;
 import io.streamnative.oxia.proto.GetResponse;
@@ -123,25 +124,31 @@ public interface Batch {
         @Override
         public void complete() {
             sample.startExec();
-            Throwable t = null;
-            try {
-                var response = getStub().reactor().write(toProto()).block();
-                for (var i = 0; i < deletes.size(); i++) {
-                    deletes.get(i).complete(response.getDeletes(i));
-                }
-                for (var i = 0; i < deleteRanges.size(); i++) {
-                    deleteRanges.get(i).complete(response.getDeleteRanges(i));
-                }
-                for (var i = 0; i < puts.size(); i++) {
-                    puts.get(i).complete(response.getPuts(i));
-                }
-            } catch (Throwable batchError) {
-                t = batchError;
-                deletes.forEach(d -> d.fail(batchError));
-                deleteRanges.forEach(f -> f.fail(batchError));
-                puts.forEach(p -> p.fail(batchError));
-            }
-            sample.stop(t, bytes, size());
+
+            getStub()
+                    .async()
+                    .write(
+                            toProto(),
+                            new RpcResult<>(
+                                    response -> {
+                                        for (var i = 0; i < deletes.size(); i++) {
+                                            deletes.get(i).complete(response.getDeletes(i));
+                                        }
+                                        for (var i = 0; i < deleteRanges.size(); i++) {
+                                            deleteRanges.get(i).complete(response.getDeleteRanges(i));
+                                        }
+                                        for (var i = 0; i < puts.size(); i++) {
+                                            puts.get(i).complete(response.getPuts(i));
+                                        }
+
+                                        sample.stop(null, bytes, size());
+                                    },
+                                    error -> {
+                                        deletes.forEach(d -> d.fail(error));
+                                        deleteRanges.forEach(f -> f.fail(error));
+                                        puts.forEach(p -> p.fail(error));
+                                        sample.stop(error, bytes, size());
+                                    }));
         }
 
         @NonNull
@@ -199,7 +206,8 @@ public interface Batch {
             LongAdder bytes = new LongAdder();
             try {
                 var responses =
-                        getStub().reactor()
+                        getStub()
+                                .reactor()
                                 .read(toProto())
                                 .flatMapSequential(response -> Flux.fromIterable(response.getGetsList()))
                                 .doOnNext(r -> bytes.add(r.getValue().size()));
