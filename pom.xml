@@ -88,7 +88,7 @@
         <assertj.version>3.24.1</assertj.version>
         <awaitility.version>3.0.0</awaitility.version>
         <checkstyle.version>10.12.5</checkstyle.version>
-        <lombok.version>1.18.30</lombok.version>
+        <lombok.version>1.18.32</lombok.version>
         <slf4j.version>1.7.32</slf4j.version>
         <junit.jupiter.version>5.9.2</junit.jupiter.version>
         <mockito.junit.jupiter.version>4.11.0</mockito.junit.jupiter.version>
